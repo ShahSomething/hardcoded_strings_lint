@@ -1,6 +1,6 @@
 name: hardcoded_strings_lint
 description: A custom Flutter lint rule that identifies and prevents hardcoded strings in widget constructors, promoting better internationalization practices and code maintainability.
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/ShahSomething
 repository: https://github.com/ShahSomething/hardcoded_strings_lint
 issue_tracker: https://github.com/ShahSomething/hardcoded_strings_lint/issues
