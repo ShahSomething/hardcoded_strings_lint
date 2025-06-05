@@ -9,7 +9,7 @@ class HardcodedStringLintRule extends DartLintRule {
 
   static const _code = LintCode(
     name: 'avoid_hardcoded_strings_in_widgets',
-    problemMessage: 'Hardcode string detected in widget ⚠️ ',
+    problemMessage: 'Hardcoded string detected in widget ⚠️ ',
     correctionMessage:
         'Replace hardcoded string with a variable or localized string.',
     errorSeverity: ErrorSeverity.WARNING,

@@ -37,6 +37,7 @@ Add the following to your project's `pubspec.yaml`:
 ```yaml
 dev_dependencies:
   custom_lint: ^0.7.5
+  analyzer: ^7.4.5
   hardcoded_strings_lint: ^1.0.0
 ```
 
