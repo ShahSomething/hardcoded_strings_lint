@@ -376,15 +376,24 @@ class _ExtractToVariableFix extends DartFix {
 
   String _generateVariableName(String value) {
     // Convert string to a reasonable variable name
-    final cleaned = value
+    final words = value
         .replaceAll(RegExp(r'[^\w\s]'), '')
         .trim()
         .toLowerCase()
         .split(RegExp(r'\s+'))
         .where((word) => word.isNotEmpty)
         .take(3) // Limit to first 3 words
-        .join('_');
+        .toList();
 
-    return cleaned.isEmpty ? 'text_value' : '${cleaned}_text';
+    if (words.isEmpty) return 'textValue';
+
+    // First word lowercase, capitalize subsequent words (camelCase)
+    final camelCase = words.first +
+        words
+            .skip(1)
+            .map((word) => word[0].toUpperCase() + word.substring(1))
+            .join();
+
+    return '${camelCase}Text';
   }
 }

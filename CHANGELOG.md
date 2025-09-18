@@ -6,6 +6,12 @@ All notable changes to the hardcoded_strings_lint package will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2025-09-18
+### Improved
+- Extract to variable fix now generates camelCase variable names instead of snake_case
+### Updated
+- Documentation
+
 ## [1.0.2] - 2025-09-18
 ### Updated
 - Updated dependencies

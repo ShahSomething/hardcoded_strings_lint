@@ -36,9 +36,9 @@ Add the following to your project's `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  custom_lint: ^0.7.5
-  analyzer: ^7.4.5
-  hardcoded_strings_lint: ^1.0.0
+  custom_lint: ^0.8.1
+  analyzer: ^8.1.1
+  hardcoded_strings_lint: ^1.0.3
 ```
 
 ### 2. Configure Analysis Options
@@ -60,6 +60,12 @@ linter:
 
 ```bash
 flutter pub get
+```
+
+### 4. Run Custom Lint
+
+```bash
+dart run custom_lint
 ```
 
 ## Usage
