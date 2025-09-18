@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/error/error.dart' hide LintCode;
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -12,13 +13,13 @@ class HardcodedStringLintRule extends DartLintRule {
     problemMessage: 'Hardcoded string detected in widget ⚠️ ',
     correctionMessage:
         'Replace hardcoded string with a variable or localized string.',
-    errorSeverity: ErrorSeverity.WARNING,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   @override
   void run(
     CustomLintResolver resolver,
-    ErrorReporter reporter,
+    DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
     context.registry.addStringLiteral((node) {
@@ -26,7 +27,7 @@ class HardcodedStringLintRule extends DartLintRule {
     });
   }
 
-  void _checkStringLiteral(StringLiteral node, ErrorReporter reporter) {
+  void _checkStringLiteral(StringLiteral node, DiagnosticReporter reporter) {
     // Check for ignore comments
     if (_hasIgnoreComment(node)) return;
 
@@ -75,7 +76,7 @@ class HardcodedStringLintRule extends DartLintRule {
       if (current is InstanceCreationExpression) {
         // Check if this is a Flutter widget
         final type = current.staticType;
-        if (type != null && _isFlutterWidget(type.element3)) {
+        if (type != null && _isFlutterWidget(type.element)) {
           return true;
         }
       }
@@ -87,7 +88,7 @@ class HardcodedStringLintRule extends DartLintRule {
           final grandParent = parent.parent;
           if (grandParent is InstanceCreationExpression) {
             final type = grandParent.staticType;
-            if (type != null && _isFlutterWidget(type.element3)) {
+            if (type != null && _isFlutterWidget(type.element)) {
               return true;
             }
           }
@@ -100,23 +101,23 @@ class HardcodedStringLintRule extends DartLintRule {
     return false;
   }
 
-  bool _isFlutterWidget(Element2? element) {
+  bool _isFlutterWidget(Element? element) {
     if (element == null) return false;
 
     // Check if the class extends Widget, StatefulWidget, or StatelessWidget
-    if (element is ClassElement2) {
+    if (element is ClassElement) {
       return _extendsWidget(element);
     }
 
     return false;
   }
 
-  bool _extendsWidget(ClassElement2 element) {
+  bool _extendsWidget(ClassElement element) {
     // Check the inheritance chain for Widget classes
-    ClassElement2? current = element;
+    ClassElement? current = element;
 
     while (current != null) {
-      final className = current.name3;
+      final className = current.name;
 
       // Common Flutter widget base classes
       if (_isWidgetBaseClass(className ?? '')) {
@@ -126,8 +127,8 @@ class HardcodedStringLintRule extends DartLintRule {
       // Check supertype
       final supertype = current.supertype;
       if (supertype != null) {
-        current = supertype.element3 is ClassElement2
-            ? supertype.element3 as ClassElement2
+        current = supertype.element is ClassElement
+            ? supertype.element as ClassElement
             : null;
       } else {
         break;
@@ -276,8 +277,8 @@ class _AddIgnoreCommentFix extends DartFix {
     CustomLintResolver resolver,
     ChangeReporter reporter,
     CustomLintContext context,
-    AnalysisError analysisError,
-    List<AnalysisError> others,
+    Diagnostic analysisError,
+    List<Diagnostic> others,
   ) {
     context.registry.addStringLiteral((node) {
       if (!analysisError.sourceRange.intersects(node.sourceRange)) return;
@@ -316,8 +317,8 @@ class _ExtractToVariableFix extends DartFix {
     CustomLintResolver resolver,
     ChangeReporter reporter,
     CustomLintContext context,
-    AnalysisError analysisError,
-    List<AnalysisError> others,
+    Diagnostic analysisError,
+    List<Diagnostic> others,
   ) {
     context.registry.addStringLiteral((node) {
       if (!analysisError.sourceRange.intersects(node.sourceRange)) return;

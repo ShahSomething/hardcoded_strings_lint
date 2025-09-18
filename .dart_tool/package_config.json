@@ -3,19 +3,19 @@
   "packages": [
     {
       "name": "_fe_analyzer_shared",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/_fe_analyzer_shared-82.0.0",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/_fe_analyzer_shared-88.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.5"
+      "languageVersion": "3.7"
     },
     {
       "name": "analyzer",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/analyzer-7.4.5",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/analyzer-8.1.1",
       "packageUri": "lib/",
-      "languageVersion": "3.5"
+      "languageVersion": "3.7"
     },
     {
       "name": "analyzer_plugin",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/analyzer_plugin-0.13.1",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/analyzer_plugin-0.13.7",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
@@ -75,7 +75,7 @@
     },
     {
       "name": "coverage",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/coverage-1.14.1",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/coverage-1.15.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -87,31 +87,31 @@
     },
     {
       "name": "custom_lint",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/custom_lint-0.7.5",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/custom_lint-0.8.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
       "name": "custom_lint_builder",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/custom_lint_builder-0.7.5",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/custom_lint_builder-0.8.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
       "name": "custom_lint_core",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/custom_lint_core-0.7.5",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
       "name": "custom_lint_visitor",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/custom_lint_visitor-1.0.0+7.4.5",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/custom_lint_visitor-1.0.0+8.1.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
       "name": "dart_style",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/dart_style-3.1.0",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/dart_style-3.1.2",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -129,7 +129,7 @@
     },
     {
       "name": "freezed_annotation",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/freezed_annotation-3.0.0",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/freezed_annotation-3.1.0",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -183,9 +183,9 @@
     },
     {
       "name": "lints",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/lints-5.1.1",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/lints-6.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "3.8"
     },
     {
       "name": "logging",
@@ -231,9 +231,9 @@
     },
     {
       "name": "pool",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/pool-1.5.1",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/pool-1.5.2",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.4"
     },
     {
       "name": "pub_semver",
@@ -333,19 +333,19 @@
     },
     {
       "name": "test",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/test-1.26.2",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/test-1.26.3",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
     {
       "name": "test_api",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/test_api-0.7.6",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/test_api-0.7.7",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
     {
       "name": "test_core",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/test_core-0.6.11",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/test_core-0.6.12",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
@@ -363,13 +363,13 @@
     },
     {
       "name": "vm_service",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/vm_service-15.0.1",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/vm_service-15.0.2",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
     {
       "name": "watcher",
-      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/watcher-1.1.1",
+      "rootUri": "file:///Users/tentwenty/.pub-cache/hosted/pub.dev/watcher-1.1.3",
       "packageUri": "lib/",
       "languageVersion": "3.1"
     },
@@ -411,8 +411,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.8.0",
-  "flutterRoot": "file:///Users/tentwenty/fvm/versions/3.32.0",
-  "flutterVersion": "3.32.0",
+  "generatorVersion": "3.9.0",
+  "flutterRoot": "file:///Users/tentwenty/fvm/versions/3.35.2",
+  "flutterVersion": "3.35.2",
   "pubCache": "file:///Users/tentwenty/.pub-cache"
 }
