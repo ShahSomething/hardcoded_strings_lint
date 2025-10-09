@@ -69,33 +69,42 @@ class HardcodedStringLintRule extends DartLintRule {
   }
 
   bool _isPassedToWidget(StringLiteral node) {
-    AstNode? current = node.parent;
+    // We only consider strings that are direct arguments of a widget
+    // constructor call. This avoids flagging strings located inside
+    // callback/function bodies (e.g., logger.info('...') inside a
+    // BlocListener listener).
 
-    // Check if string is passed as a constructor argument to a widget
-    while (current != null) {
-      if (current is InstanceCreationExpression) {
-        // Check if this is a Flutter widget
-        final type = current.staticType;
-        if (type != null && _isFlutterWidget(type.element)) {
-          return true;
-        }
+    // Find the nearest ArgumentList ancestor that contains this string.
+    final argumentList = node.thisOrAncestorOfType<ArgumentList>();
+    if (argumentList == null) return false;
+
+    // If there is a FunctionExpression/FunctionBody between the string
+    // and the ArgumentList, then this string belongs to a different
+    // invocation (e.g., a callback body) and should not be treated as
+    // a widget argument.
+    AstNode? walker = node.parent;
+    while (walker != null && walker != argumentList) {
+      if (walker is FunctionExpression || walker is FunctionBody) {
+        return false;
       }
+      walker = walker.parent;
+    }
 
-      // Check if string is passed as a parameter to a widget method/property
-      if (current is NamedExpression) {
-        final parent = current.parent;
-        if (parent is ArgumentList) {
-          final grandParent = parent.parent;
-          if (grandParent is InstanceCreationExpression) {
-            final type = grandParent.staticType;
-            if (type != null && _isFlutterWidget(type.element)) {
-              return true;
-            }
-          }
-        }
+    // Ensure that this argument list belongs to an InstanceCreationExpression
+    // (i.e., a constructor call) and that the constructed type is a Widget.
+    final owner = argumentList.parent;
+    if (owner is! InstanceCreationExpression) return false;
+
+    final type = owner.staticType;
+    if (type == null || !_isFlutterWidget(type.element)) return false;
+
+    // Verify the string is directly part of this ArgumentList (either as a
+    // positional argument or as the value of a NamedExpression).
+    for (final arg in argumentList.arguments) {
+      if (identical(arg, node)) return true;
+      if (arg is NamedExpression && identical(arg.expression, node)) {
+        return true;
       }
-
-      current = current.parent;
     }
 
     return false;
