@@ -13,6 +13,11 @@
 
 include: package:lints/recommended.yaml
 
+linter:
+  rules:
+    # Tests use snake_case method names per test_reflective_loader convention.
+    non_constant_identifier_names: false
+
 # Uncomment the following section to specify additional rules.
 
 # linter:
