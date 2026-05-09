@@ -19,6 +19,8 @@ class AvoidHardcodedStringsTest extends AnalysisRuleTest {
     super.setUp();
   }
 
+  // --- Phase 1 baseline ---
+
   Future<void> test_hardcoded_string_in_text_reports() async {
     await assertDiagnostics(
       r'''
@@ -43,6 +45,173 @@ Widget build() => Text('a');
 import 'package:flutter/widgets.dart';
 
 Widget build() => Text('');
+''');
+  }
+
+  // --- Technical string skip ---
+
+  Future<void> test_url_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('https://example.com');
+''');
+  }
+
+  Future<void> test_email_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('user@example.com');
+''');
+  }
+
+  Future<void> test_hex_color_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('#FF5722');
+''');
+  }
+
+  Future<void> test_snake_case_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('snake_case_value');
+''');
+  }
+
+  Future<void> test_constant_case_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('CONSTANT_VALUE');
+''');
+  }
+
+  Future<void> test_dotted_notation_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('package.asset');
+''');
+  }
+
+  // --- Acceptable widget property skip ---
+
+  Future<void> test_semantics_label_property_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('hi', semanticsLabel: 'A long accessibility label');
+''');
+  }
+
+  Future<void> test_restoration_id_property_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/material.dart';
+
+Widget build() =>
+    const Scaffold(restorationId: 'A long restoration Id value');
+''');
+  }
+
+  // --- Map key skip ---
+
+  Future<void> test_index_expression_string_key_does_not_report() async {
+    await assertNoDiagnostics(r'''
+String? lookup(Map<String, String> map) => map['some long key'];
+''');
+  }
+
+  Future<void> test_map_literal_string_key_does_not_report() async {
+    await assertNoDiagnostics(r'''
+Map<String, int> get values => {'some long key': 1};
+''');
+  }
+
+  // --- Callback body skip (v1.0.4 regression) ---
+
+  Future<void> test_string_inside_callback_body_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+class _Logger {
+  void info(String message) {}
+}
+
+Widget build(_Logger logger) => GestureDetector(
+      onTap: () {
+        logger.info('skip me inside a callback');
+      },
+      child: const SizedBox(),
+    );
+''');
+  }
+
+  // --- Non-widget invocations ---
+
+  Future<void> test_print_call_does_not_report() async {
+    await assertNoDiagnostics(r'''
+void main() {
+  print('hello world');
+}
+''');
+  }
+
+  Future<void> test_non_widget_function_call_does_not_report() async {
+    await assertNoDiagnostics(r'''
+void myFunction(String x) {}
+
+void main() {
+  myFunction('hello world');
+}
+''');
+  }
+
+  // --- Custom widget chain walk ---
+
+  Future<void> test_custom_widget_extends_stateless_reports() async {
+    await assertDiagnostics(
+      r'''
+import 'package:flutter/widgets.dart';
+
+class MyBadge extends StatelessWidget {
+  const MyBadge(this.label, {super.key});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Text(label);
+}
+
+Widget root() => const MyBadge('Hello world');
+''',
+      [lint(244, 13)],
+    );
+  }
+
+  // --- Adjacent / interpolation ---
+
+  Future<void> test_adjacent_strings_passed_to_widget_reports() async {
+    // The visitor reports the AdjacentStrings node (the direct widget arg)
+    // rather than each fragment, because v1's "direct argument" check only
+    // matches whole `arguments` entries.
+    await assertDiagnostics(
+      r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('foo bar' 'baz qux');
+''',
+      [lint(63, 19)],
+    );
+  }
+
+  Future<void> test_string_interpolation_does_not_report() async {
+    await assertNoDiagnostics(r'''
+import 'package:flutter/widgets.dart';
+
+Widget build(String name) => Text('Hello $name');
 ''');
   }
 }

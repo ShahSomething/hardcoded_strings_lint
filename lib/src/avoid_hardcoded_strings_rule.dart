@@ -64,8 +64,73 @@ class _Visitor extends SimpleAstVisitor<void> {
     if (value.length <= 2) return;
 
     if (!_isPassedToWidget(node)) return;
+    if (_isMapKey(node)) return;
+    if (_isAcceptableWidgetProperty(node)) return;
+    if (_isTechnicalString(value)) return;
 
     rule.reportAtNode(node);
+  }
+
+  bool _isMapKey(StringLiteral node) {
+    final parent = node.parent;
+    if (parent is IndexExpression) {
+      return parent.index == node;
+    }
+    if (parent is MapLiteralEntry) {
+      return parent.key == node;
+    }
+    return false;
+  }
+
+  bool _isAcceptableWidgetProperty(StringLiteral node) {
+    final parent = node.parent;
+    if (parent is! NamedArgument) return false;
+
+    final propertyName = parent.name.lexeme;
+
+    const acceptableProperties = {
+      'semanticsLabel',
+      'excludeSemantics',
+      'restorationId',
+      'heroTag',
+      'key',
+      'debugLabel',
+      'fontFamily',
+      'package',
+      'name',
+      'asset',
+      'tooltip',
+      'textDirection',
+      'locale',
+      'materialType',
+      'clipBehavior',
+      'crossAxisAlignment',
+      'mainAxisAlignment',
+      'textAlign',
+      'textBaseline',
+      'overflow',
+      'softWrap',
+      'textScaleFactor',
+    };
+
+    return acceptableProperties.contains(propertyName);
+  }
+
+  bool _isTechnicalString(String value) {
+    final technicalPatterns = [
+      RegExp(r'^\w+://'),
+      RegExp(r'^[\w\-\.]+@[\w\-\.]+\.\w+'),
+      RegExp(r'^#[0-9A-Fa-f]{3,8}'),
+      RegExp(r'^\d+(\.\d+)?[a-zA-Z]*'),
+      RegExp(r'^[A-Z][A-Z0-9]*_[A-Z0-9_]*'),
+      RegExp(r'^[a-z]+_[a-z_]+'),
+      RegExp(r'^/[\w/\-\.]*'),
+      RegExp(r'^\w+\.\w+'),
+      RegExp(r'^[\w\-]+\.[\w]+'),
+      RegExp(r'^[a-zA-Z0-9]*[_\-0-9]+[a-zA-Z0-9_\-]*'),
+    ];
+
+    return technicalPatterns.any((pattern) => pattern.hasMatch(value.trim()));
   }
 
   bool _isPassedToWidget(StringLiteral node) {

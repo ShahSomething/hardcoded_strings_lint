@@ -36,30 +36,30 @@ Clean break from `custom_lint_builder` → `analysis_server_plugin`. Preserve al
 - [x] TDD: rule does NOT report for `Text('')` → then implement guard.
 - [x] Verify: `dart pub get && dart analyze && dart test` in pkg root; `dart pub get && dart analyze` in `example/` produces hardcoded-string warning on `lib/main.dart`.
 
-### Phase 2: Port full detection filter set + delete v1 monolith
+### Phase 2: Port full detection filter set + delete v1 monolith ✅
 
 - **Goal**: Behavior parity with v1 — widget walk, callback skip, technical/property/map-key filters. Delete legacy file.
-- [ ] `lib/src/avoid_hardcoded_strings_rule.dart` — port verbatim from v1 (`hardcoded_strings_lint_base.dart`):
-  - `_isPassedToWidget` (ArgumentList ancestor walk + FunctionExpression/FunctionBody early-out + InstanceCreationExpression check + widget-type check + direct-arg / NamedExpression match).
-  - `_isFlutterWidget` + `_extendsWidget` + `_isWidgetBaseClass` allowlist (12 classes verbatim). Confirm `supertype.element` resolves under `analyzer ^12.x` — do NOT switch to suffixed accessors.
+- [x] `lib/src/avoid_hardcoded_strings_rule.dart` — port verbatim from v1 (`hardcoded_strings_lint_base.dart`):
+  - `_isPassedToWidget` (ArgumentList ancestor walk + FunctionExpression/FunctionBody early-out + InstanceCreationExpression check + widget-type check + direct-arg / NamedArgument match). _(analyzer 13 renames `NamedExpression`→`NamedArgument` and exposes the value via `argumentExpression` / the name via `name.lexeme`.)_
+  - `_isFlutterWidget` + `_extendsWidget` + `_isWidgetBaseClass` allowlist (12 classes verbatim). Walk via `InterfaceElement` (analyzer 13's `supertype.element` is typed as `InterfaceElement`, not `ClassElement`).
   - `_isAcceptableWidgetProperty` (22-property allowlist verbatim).
   - `_isTechnicalString` (10-regex set verbatim).
   - `_isMapKey` (`IndexExpression.index` + `MapLiteralEntry.key`).
   - Order in visitor: empty/short → `_isPassedToWidget` → `_isMapKey` → `_isAcceptableWidgetProperty` → `_isTechnicalString` → report (match v1).
   - Do NOT port `_hasIgnoreComment` / `_containsIgnoreComment`.
-- [ ] Delete `lib/src/hardcoded_strings_lint_base.dart`.
-- [ ] TDD per filter (one RED→GREEN cycle each):
+- [x] Delete `lib/src/hardcoded_strings_lint_base.dart`. _(Done in Phase 1.)_
+- [x] TDD per filter (one RED→GREEN cycle each):
   - URL / email / hex / snake_case / CONSTANT_CASE / dotted-notation skipped.
-  - `Hero(tag:)`, `Image.asset(...)`, `Semantics(label:)` skipped.
+  - Acceptable widget properties skipped (used `Text(semanticsLabel:)` and `Scaffold(restorationId:)`; `Hero`/`Image`/`Semantics` are not in the `analyzer_testing` mock Flutter package, so substituted with widgets that exist in the mock).
   - `map['k']` and `{'k': v}` skipped.
-  - `BlocListener(listener: (ctx, st) { logger.info('skip me'); })` NOT flagged (v1.0.4 regression test).
+  - String inside `GestureDetector(onTap: () { logger.info('...'); })` NOT flagged (v1.0.4 regression test; substitutes `BlocListener` since BLoC isn't in the mock).
   - `print('hi')` and `myFn('hi')` (non-widget) NOT flagged.
-  - Custom `class MyWidget extends StatelessWidget` flagged on its `Text(...)` arg (chain walk).
-  - Adjacent strings `Text('foo' 'bar')` — visit each fragment.
+  - Custom `class MyBadge extends StatelessWidget` flagged on its `Text(...)` arg (chain walk via `InterfaceElement.supertype`).
+  - Adjacent strings `Text('foo bar' 'baz qux')` — reports the AdjacentStrings node (single diagnostic). Per-fragment reporting was claimed by the plan but does not match v1: v1's "direct argument" check only matches whole `arguments` entries, so individual fragments inside `AdjacentStrings` are filtered out.
   - Interpolation `Text('Hello $name')` NOT flagged (`stringValue == null` guard).
-  - `// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets` suppresses (analyzer-native; verify via `analyzer_testing` ignore handling).
-- [ ] Error-handling: when `staticType == null` or element unresolvable, skip silently (match v1).
-- [ ] Verify: `dart analyze` (zero issues), `dart test` (all pass), `dart analyze` in `example/` (still flags expected strings).
+  - Ignore-comment suppression deferred to Phase 4 manual verification (the `analyzer_testing` harness applies its own analysis options that re-enable the rule, so a plain `// ignore:` test is brittle).
+- [x] Error-handling: when `staticType == null` or element unresolvable, skip silently (match v1). _(Implicit: `_isFlutterWidget` returns `false` when element isn't an `InterfaceElement`.)_
+- [x] Verify: `dart analyze` (zero issues), `dart test` (all pass; 19 tests), `dart analyze` in `example/` (still flags 3 expected strings).
 
 ### Phase 3: Quick fixes + fix tests
 
