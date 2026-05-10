@@ -20,5 +20,13 @@ class HardcodedStringsPlugin extends Plugin {
       AvoidHardcodedStrings.code,
       ExtractToVariableFix.new,
     );
+    registry.registerFixForRule(
+      AvoidHardcodedStrings.code,
+      IgnoreForFileFix.new,
+    );
+    registry.registerFixForRule(
+      AvoidHardcodedStrings.code,
+      IgnoreInAnalysisOptionsFix.new,
+    );
   }
 }
