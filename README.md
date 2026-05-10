@@ -49,6 +49,22 @@ plugins:
       avoid_hardcoded_strings_in_widgets: true
 ```
 
+### Custom warning messages
+
+Override the lint message and correction hint to use project-specific language (e.g. pointing to your own i18n docs):
+
+```yaml
+plugins:
+  hardcoded_strings_lint:
+    options:
+      message: "Hardcoded string! Externalize to your ARB file."
+      correction_message: "See docs/i18n.md for instructions."
+    diagnostics:
+      avoid_hardcoded_strings_in_widgets: true
+```
+
+Both `message` and `correction_message` are optional. Omitting either keeps that field's built-in default. An empty string also falls back to the default.
+
 ### 2. Resolve and analyze
 
 ```bash
