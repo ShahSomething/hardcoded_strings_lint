@@ -1,93 +1,81 @@
 # Hardcoded Strings Lint
 
-A custom Flutter lint rule that identifies and prevents hardcoded strings in widget constructors, promoting better internationalization practices and code maintainability.
+A Flutter analyzer plugin that detects hardcoded strings in widget constructors, encouraging better internationalization and code maintainability.
 
 ## Overview
 
-The `hardcoded_strings_lint` package provides a sophisticated lint rule that automatically detects hardcoded string literals in Flutter widgets and suggests fixes to improve code quality. This tool is essential for Flutter applications that need to support multiple languages or maintain clean, professional codebases.
+`hardcoded_strings_lint` is built on top of Dart's official [`analysis_server_plugin`][asp] system, so its diagnostics surface natively in `dart analyze` and inside the Dart Analysis Server (VS Code, IntelliJ, etc.) without any extra commands.
+
+[asp]: https://pub.dev/packages/analysis_server_plugin
 
 ## Features
 
-### 🔍 **Smart Detection**
-- Identifies hardcoded strings specifically in Flutter widget contexts
-- Distinguishes between user-facing text and technical strings
-- Ignores acceptable technical properties and configuration values
+### Smart Detection
 
-### 🎯 **Intelligent Filtering**
-- **Skips technical strings**: URLs, email addresses, hex colors, file paths, identifiers
-- **Ignores short strings**: Single characters, operators, and very short text (≤2 characters)
-- **Excludes map keys**: Strings used as keys in maps or index expressions
-- **Respects acceptable properties**: Asset names, debug labels, technical identifiers
+- Flags hardcoded strings passed directly to Flutter widget constructor arguments.
+- Skips strings inside callback bodies (e.g. `onTap: () { logger.info('...'); }`).
+- Walks the inheritance chain so custom `Widget` subclasses are detected.
 
-### 🛠️ **Built-in Quick Fixes**
-- **Add ignore comment**: Quickly suppress the warning for specific cases
-- **Extract to variable**: Automatically extract hardcoded strings to local variables or class constants
+### Intelligent Filtering
 
-### 💡 **Flexible Ignore System**
-- Support for multiple ignore comment patterns
-- Line-specific and file-level ignores
-- Case-insensitive pattern matching
+- **Technical patterns skipped**: URLs, emails, hex colors, snake_case, CONSTANT_CASE, dotted notation, file paths.
+- **Short strings skipped**: empty and ≤ 2 characters.
+- **Map keys skipped**: `map['k']` and `{'k': value}`.
+- **Acceptable widget properties skipped**: `semanticsLabel`, `restorationId`, `heroTag`, `key`, `debugLabel`, `tooltip`, `fontFamily`, `package`, `asset`, `textDirection`, `textAlign`, and others.
+
+### Quick Fixes
+
+- **Add ignore comment** — inserts the prefixed `// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets` above the offending line.
+- **Extract to variable** — extracts the literal to a `const` local (inside a method) or a `static const` field (inside a class), naming the variable from the string contents (e.g. `'Hello, World!'` → `helloWorldText`).
 
 ## Installation
 
-### 1. Add Dependencies
+### 1. Configure `analysis_options.yaml`
 
-Add the following to your project's `pubspec.yaml`:
-
-```yaml
-dev_dependencies:
-  custom_lint: ^0.8.1
-  analyzer: ^8.1.1
-  hardcoded_strings_lint: ^1.0.3
-```
-
-### 2. Configure Analysis Options
-
-Add to your `analysis_options.yaml`:
+Add the plugin under the **top-level** `plugins:` block (not under `analyzer:`):
 
 ```yaml
-analyzer:
-  plugins:
-    - custom_lint
-
-# Optional: Configure additional linter rules
-linter:
-  rules:
-    # Your existing rules
+plugins:
+  hardcoded_strings_lint: ^2.0.0
 ```
 
-### 3. Install Dependencies
+The plugin's diagnostic is enabled by default. To explicitly disable or re-enable it use the nested `diagnostics:` map:
+
+```yaml
+plugins:
+  hardcoded_strings_lint:
+    version: ^2.0.0
+    diagnostics:
+      avoid_hardcoded_strings_in_widgets: true
+```
+
+### 2. Resolve and analyze
 
 ```bash
-flutter pub get
+dart pub get
+dart analyze
 ```
 
-### 4. Run Custom Lint
+That's it — no separate `dart run …` command, no `dev_dependencies` entry, no `analyzer.plugins` block.
 
-```bash
-dart run custom_lint
-```
+> **Restart the analyzer** in your IDE after first installing the plugin or changing the `plugins:` section.
 
 ## Usage
 
-Once installed and configured, the lint rule will automatically analyze your Flutter code and highlight hardcoded strings in widget constructors.
-
-### Example: Problematic Code
-
 ```dart
 class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Welcome to Our App'), // ⚠️ Hardcoded string detected
+        title: Text('Welcome to Our App'), // ⚠️ flagged
       ),
       body: Column(
         children: [
-          Text('Hello, World!'), // ⚠️ Hardcoded string detected
+          Text('Hello, World!'), // ⚠️ flagged
           ElevatedButton(
             onPressed: () {},
-            child: Text('Get Started'), // ⚠️ Hardcoded string detected
+            child: Text('Get Started'), // ⚠️ flagged
           ),
         ],
       ),
@@ -96,30 +84,27 @@ class WelcomeScreen extends StatelessWidget {
 }
 ```
 
-### Example: Acceptable Code
-
 ```dart
 class WelcomeScreen extends StatelessWidget {
-  // Using extracted constants
-  static const String _welcomeTitle = 'Welcome to Our App';
-  static const String _helloText = 'Hello, World!';
-  static const String _getStartedText = 'Get Started';
+  static const _welcomeTitle = 'Welcome to Our App';
+  static const _helloText = 'Hello, World!';
+  static const _getStartedText = 'Get Started';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_welcomeTitle), // ✅ Using constant
-        backgroundColor: Colors.blue, // ✅ Technical value, ignored
+        title: Text(_welcomeTitle), // ✅
+        backgroundColor: Colors.blue, // ✅ technical value
       ),
       body: Column(
         children: [
-          Text(_helloText), // ✅ Using constant
+          Text(_helloText), // ✅
           ElevatedButton(
             onPressed: () {},
-            child: Text(_getStartedText), // ✅ Using constant
+            child: Text(_getStartedText), // ✅
           ),
-          Image.asset('assets/logo.png'), // ✅ Asset path, ignored
+          Image.asset('assets/logo.png'), // ✅ asset path
         ],
       ),
     );
@@ -127,185 +112,173 @@ class WelcomeScreen extends StatelessWidget {
 }
 ```
 
-## Ignoring Warnings
+## Ignoring warnings
 
-### Method 1: Ignore Comments
+The plugin uses the analyzer's native ignore-comment system. The `hardcoded_strings_lint/` prefix is required — bespoke shorthands like `// hardcoded.ok` are no longer recognized.
+
+### Per line
 
 ```dart
-// ignore: avoid_hardcoded_strings_in_widgets
-Text('This is acceptable hardcoded text')
-
-// Or using alternative patterns:
-// ignore: hardcoded.string
-Text('Debug text only')
-
-// hardcoded.ok
-Text('Temporary placeholder')
+// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets
+Text('This is acceptable hardcoded text'),
 ```
 
-### Method 2: File-level Ignore
+### Per file
 
 ```dart
-// ignore_for_file: avoid_hardcoded_strings_in_widgets
+// ignore_for_file: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets
 
-class DebugScreen extends StatelessWidget {
-  // All hardcoded strings in this file will be ignored
-}
+class DebugScreen extends StatelessWidget { /* ... */ }
 ```
 
-## Smart Filtering Rules
+## Smart filtering rules
 
-### Automatically Ignored Strings
+### Technical patterns automatically skipped
 
-#### Technical Patterns
-- **URLs**: `https://example.com`, `file://path`
-- **Email addresses**: `user@example.com`
-- **Hex colors**: `#FF5722`, `#ffffff`
-- **File paths**: `/assets/images/logo.png`
-- **Identifiers**: `snake_case_id`, `CONSTANT_VALUE`
+- URLs: `https://example.com`, `file://path`
+- Email addresses: `user@example.com`
+- Hex colors: `#FF5722`, `#ffffff`
+- File paths: `/assets/images/logo.png`
+- snake_case / CONSTANT_CASE identifiers
+- Dotted notation: `package.asset`
 
-#### Widget Properties
-The following widget properties are considered acceptable for hardcoded strings:
+### Acceptable widget properties
 
 ```dart
-// Accessibility and semantics
-Semantics(label: 'Navigation button') // ✅ Ignored
-
-// Technical identifiers
-Hero(tag: 'hero_tag') // ✅ Ignored
-Widget(key: Key('unique_key')) // ✅ Ignored
-
-// Asset references
-Image.asset('assets/logo.png') // ✅ Ignored
-
+Text('hi', semanticsLabel: 'A long accessibility label'), // ✅
+Scaffold(restorationId: 'home_scaffold'),                 // ✅
 ```
 
-## Quick Fixes
+Full allowlist: `semanticsLabel`, `excludeSemantics`, `restorationId`, `heroTag`, `key`, `debugLabel`, `fontFamily`, `package`, `name`, `asset`, `tooltip`, `textDirection`, `locale`, `materialType`, `clipBehavior`, `crossAxisAlignment`, `mainAxisAlignment`, `textAlign`, `textBaseline`, `overflow`, `softWrap`, `textScaleFactor`.
 
-### 1. Add Ignore Comment
-Automatically adds an ignore comment above the flagged line:
+## Quick fixes
+
+### Add ignore comment
 
 ```dart
-// Before quick fix:
+// Before:
 Text('Hello World')
 
-// After applying "Add ignore comment":
-// ignore: avoid_hardcoded_strings_in_widgets
+// After:
+// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets
 Text('Hello World')
 ```
 
-### 2. Extract to Variable
-Automatically extracts the string to a variable:
+### Extract to variable
 
 ```dart
-// Before quick fix:
+// Before (inside a build method):
 Text('Welcome to our application')
 
-// After applying "Extract to variable" (method scope):
+// After:
+@override
 Widget build(BuildContext context) {
-  const welcomeToOurApplicationText = 'Welcome to our application';
-  return Text(welcomeToOurApplicationText);
+  const welcomeToOurText = 'Welcome to our application';
+  return Text(welcomeToOurText);
 }
 
-// After applying "Extract to variable" (class scope):
+// Before (inside a class, outside a method):
 class MyWidget extends StatelessWidget {
-  static const welcomeToOurApplicationText = 'Welcome to our application';
-  
-  Widget build(BuildContext context) {
-    return Text(welcomeToOurApplicationText);
-  }
+  final Widget header = Text('Welcome to our application');
+}
+
+// After:
+class MyWidget extends StatelessWidget {
+  static const welcomeToOurText = 'Welcome to our application';
+  final Widget header = Text(welcomeToOurText);
 }
 ```
 
-## Configuration
+## Migrating from 1.x
 
-### Acceptable Properties
+Version 2.0.0 is a clean break. The package is now built on Dart's official `analysis_server_plugin` system instead of the deprecated `custom_lint_builder` ecosystem.
 
-The rule comes pre-configured with a comprehensive list of widget properties where hardcoded strings are acceptable:
+**Why the break**: `custom_lint` is no longer actively developed. The Dart team's `analysis_server_plugin` is the official replacement, ships with Dart 3.10 (Flutter 3.38) and later, and removes the need for a separate `dart run custom_lint` step.
 
-- **Accessibility**: `semanticsLabel`, `excludeSemantics`
-- **Technical IDs**: `restorationId`, `heroTag`, `key`, `debugLabel`
-- **Assets**: `fontFamily`, `package`, `asset`
-- **Layout**: `textDirection`, `textAlign`, `crossAxisAlignment`
+### `pubspec.yaml`
 
-### Technical String Patterns
+```diff
+ environment:
+-  sdk: ^3.6.0
++  sdk: ^3.11.0  # Flutter 3.41+
 
-The following patterns are automatically recognized as technical:
-- URLs and schemes
-- Email addresses
-- Hex color codes
-- File paths and extensions
-- CONSTANT_CASE identifiers
-- snake_case identifiers
-- Dotted notation (package.asset)
-
-## Best Practices
-
-### 1. Use Localization
-```dart
-// Recommended approach
-Text(AppLocalizations.of(context).welcomeMessage)
-
-// Alternative with constants
-static const String welcomeMessage = 'Welcome';
-Text(welcomeMessage)
+ dev_dependencies:
+-  custom_lint: ^0.8.1
+-  analyzer: ^8.1.1
+-  hardcoded_strings_lint: ^1.0.4
 ```
 
-### 2. Group Related Strings
-```dart
-class AppStrings {
-  static const String appTitle = 'My App';
-  static const String welcomeMessage = 'Welcome';
-  static const String loginButton = 'Login';
-}
+The plugin is no longer a `dev_dependency` — it's loaded entirely through `analysis_options.yaml`.
+
+### `analysis_options.yaml`
+
+```diff
+-analyzer:
+-  plugins:
+-    - custom_lint
++plugins:
++  hardcoded_strings_lint: ^2.0.0
 ```
 
-### 3. Use Ignore Comments Sparingly
-```dart
-// Good use case - debug/development only
-// ignore: avoid_hardcoded_strings_in_widgets
-Text('DEBUG: Current state: $state')
+Note the `plugins:` block is now a **top-level** key, not nested under `analyzer:`.
 
-// Consider localization instead for user-facing text
-Text(context.l10n.welcomeMessage) // Better approach
+### Ignore comments
+
+The ignore syntax now requires the `hardcoded_strings_lint/` prefix:
+
+```diff
+-// ignore: avoid_hardcoded_strings_in_widgets
+-// ignore: hardcoded.string
+-// hardcoded.ok
++// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets
 ```
+
+The bespoke `// hardcoded.ok` and `// ignore: hardcoded.string` shorthands are removed.
+
+### No more `dart run custom_lint`
+
+`dart analyze` and the Dart Analysis Server pick up the plugin automatically. There's nothing else to run.
 
 ## Troubleshooting
 
-### Common Issues
+### Rule not running
 
-#### 1. Rule Not Running
-- Ensure `custom_lint` is added to `dev_dependencies`
-- Verify `analyzer.plugins` includes `custom_lint` in `analysis_options.yaml`
-- Run `flutter pub get` after configuration changes
-- Run `dart run custom_lint`
+1. Confirm `hardcoded_strings_lint` is listed under `plugins:` in `analysis_options.yaml`.
+2. Restart the Dart Analysis Server / your IDE — plugin changes only take effect after a restart.
+3. Run `dart pub get`.
+4. Run `dart analyze` to surface diagnostics from the command line.
 
-#### 2. False Positives
-- Use ignore comments for legitimate hardcoded strings
-- Check if the string matches technical patterns
-- Consider if the widget property should be in the acceptable list
+### Ignore comments not taking effect
 
-#### 3. Performance
-- The rule is optimized to skip non-widget contexts
-- Large files may take slightly longer to analyze
-- Consider using ignore_for_file for generated files
+This can happen in workspaces with multiple `analysis_options.yaml` files (see [dart-lang/sdk#62173](https://github.com/dart-lang/sdk/issues/62173)). The fix is tracked upstream; for now, hoist the `plugins:` block to a single root analysis options file.
 
-## Contributing
+### False positives
 
-This package is part of a larger Flutter project. For contributions:
+- Verify the string really matches a technical pattern listed above. If not, add an ignore comment or rename the value to fit a pattern (e.g. `snake_case`).
+- Consider whether the widget argument should be added to the acceptable allowlist; PRs welcome.
 
-1. Follow the existing code style
-2. Add tests for new functionality
-3. Update documentation for any new features
-4. Ensure backward compatibility
+## Best practices
+
+```dart
+// Recommended: localization
+Text(AppLocalizations.of(context).welcomeMessage)
+
+// Or grouped constants
+class AppStrings {
+  static const appTitle = 'My App';
+  static const welcomeMessage = 'Welcome';
+  static const loginButton = 'Login';
+}
+
+// Use ignore comments sparingly — debug/dev only
+// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets
+Text('DEBUG: state=$state')
+```
 
 ## License
+
 This package is released under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
-
----
-
-**Note**: This lint rule is designed to improve code quality and internationalization readiness. While it provides intelligent filtering, manual review of suggestions is recommended to ensure the best outcome for your specific use case.
+See [CHANGELOG.md](CHANGELOG.md) for version history.

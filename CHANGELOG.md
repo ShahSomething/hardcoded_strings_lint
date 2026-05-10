@@ -6,6 +6,22 @@ All notable changes to the hardcoded_strings_lint package will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-05-10
+### Changed
+- **BREAKING**: Migrated from `custom_lint_builder` to Dart's official [`analysis_server_plugin`][asp] system. The plugin is now loaded through a top-level `plugins:` block in `analysis_options.yaml` instead of being a `dev_dependency` registered under `analyzer.plugins`. See the README's "Migrating from 1.x" section for the full diff.
+- **BREAKING**: Minimum Dart SDK is now `^3.11.0` (Flutter 3.41+). The constraint comes from `analysis_server_plugin: ^0.3.15` → `analyzer: 13.0.0`, which itself requires Dart 3.11.
+- **BREAKING**: Ignore comments now require the `hardcoded_strings_lint/` plugin-name prefix (an `analysis_server_plugin` requirement). Use `// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets` instead of the bare rule name.
+- **BREAKING**: Removed the bespoke `// hardcoded.ok` and `// ignore: hardcoded.string` shorthand patterns. Suppression now uses the analyzer's native ignore-comment handling exclusively.
+
+### Removed
+- The `createPlugin()` factory and the `package:hardcoded_strings_lint/hardcoded_strings_lint.dart` library entry. The plugin is loaded from `package:hardcoded_strings_lint/main.dart` per the `analysis_server_plugin` convention.
+- `dart run custom_lint` is no longer required (or supported). Diagnostics surface natively in `dart analyze` and the Dart Analysis Server.
+
+### Added
+- Unit test suite covering the rule (19 tests) and both quick fixes (8 tests), built on the official `analyzer_testing` harness.
+
+[asp]: https://pub.dev/packages/analysis_server_plugin
+
 ## [1.0.4] - 2025-10-09
 ### Improved
 - Refined widget argument detection logic to prevent false positives

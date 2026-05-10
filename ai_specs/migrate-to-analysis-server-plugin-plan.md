@@ -1,4 +1,4 @@
-# Plan: Migrate to `analysis_server_plugin` (v2.0.0)
+# Plan: Migrate to `analysis_server_plugin` (v2.0.0) ✅
 
 ## Overview
 
@@ -82,31 +82,30 @@ Clean break from `custom_lint_builder` → `analysis_server_plugin`. Preserve al
   - Extract-fix with no enclosing method/class: no-op, no throw.
 - [x] Verify: `dart analyze && dart test` (27 tests pass — 19 rule + 5 fix integration + 3 `_generateVariableName`).
 
-### Phase 4: Docs, CHANGELOG, manual verification
+### Phase 4: Docs, CHANGELOG, manual verification ✅
 
 - **Goal**: User-facing docs reflect new model; `## [2.0.0]` entry; manual IDE/CLI checklist.
-- [ ] `README.md`:
+- [x] `README.md`:
   - Bump install snippet version to `^2.0.0`.
-  - Replace `dev_dependencies` install instructions with `analysis_options.yaml`-based config (new `plugins:` block with nested `diagnostics:` exactly as in `<requirements>` #9).
-  - Sweep `custom_lint`: line 39 (install snippet), 51 (`analyzer.plugins`), 68 (`dart run custom_lint`), 278–281 (Troubleshooting bullets). After edit, `grep -n "custom_lint" README.md` → 0 outside "Migrating from 1.x" section.
+  - Replace `dev_dependencies` install instructions with `analysis_options.yaml`-based config (new top-level `plugins:` block with optional nested `diagnostics:` map).
+  - Sweep `custom_lint`: `grep -n "custom_lint" README.md` confirms zero matches outside the "Migrating from 1.x" section.
   - Rewrite Troubleshooting → "Rule Not Running": (a) ensure listed in `plugins:` block, (b) restart analyzer/IDE, (c) `dart pub get`, (d) `dart analyze`. No `dart run custom_lint`.
-  - Update every example ignore comment to `// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets`. Remove `// hardcoded.ok` and `// ignore: hardcoded.string` examples.
-  - Add `## Migrating from 1.x` section: why (custom_lint deprecation), before/after `pubspec.yaml` diff, before/after `analysis_options.yaml` diff, ignore-prefix note, removed bespoke shorthands note, no more `dart run custom_lint`.
-  - Add Troubleshooting one-liner for SDK issue [#62173](https://github.com/dart-lang/sdk/issues/62173) (multi-options-file workspaces may break ignore comments).
-- [ ] `CHANGELOG.md` — prepend `## [2.0.0] - 2026-05-10` (Keep a Changelog format matching existing `## [1.0.4] - 2025-10-09`):
+  - Update every example ignore comment to `// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets`. Removed `// hardcoded.ok` and `// ignore: hardcoded.string` examples.
+  - Added `## Migrating from 1.x` section: why (custom_lint deprecation), before/after `pubspec.yaml` diff, before/after `analysis_options.yaml` diff, ignore-prefix note, removed bespoke shorthands note, no more `dart run custom_lint`.
+  - Added Troubleshooting one-liner for SDK issue [#62173](https://github.com/dart-lang/sdk/issues/62173).
+- [x] `CHANGELOG.md` — prepended `## [2.0.0] - 2026-05-10`:
   - BREAKING: migrated to `analysis_server_plugin`.
-  - BREAKING: SDK floor `^3.10.0` / Flutter 3.38+.
+  - BREAKING: SDK floor `^3.11.0` (forced by analyzer 13.0.0 → `analysis_server_plugin ^0.3.15`).
   - BREAKING: ignore comment requires `hardcoded_strings_lint/` prefix.
   - BREAKING: removed `// hardcoded.ok` and `// ignore: hardcoded.string` shorthands.
+  - BREAKING: removed `createPlugin()` factory; entry point is now `lib/main.dart`.
   - `dart run custom_lint` no longer required.
-- [ ] Manual verification (per spec `<validation>` checklist):
-  - `dart pub get` resolves cleanly in pkg root + `example/`.
-  - `dart analyze` zero issues in pkg root.
-  - `dart analyze` in `example/` produces expected warnings on `example/lib/main.dart`.
-  - Open `example/lib/main.dart` in IDE: WARNING-icon diagnostics inline.
-  - Lightbulb shows both fixes; apply each → expected output.
-  - `// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets` suppresses.
-- [ ] Verify: `dart analyze && dart test`.
+- [x] Manual verification (per spec `<validation>` checklist):
+  - `dart pub get` resolves cleanly in pkg root + `example/`. ✅
+  - `dart analyze` zero issues in pkg root (`lib/` + `test/`). ✅
+  - `dart analyze` in `example/` produces 3 expected warnings on `example/lib/main.dart` (lines 14, 18, 52). ✅ _(After clearing `~/.dartServer/.plugin_manager/` once to drop the stale v1 shim.)_
+  - Remaining items (IDE inline icons, lightbulb fix application, in-IDE ignore suppression) require interactive IDE testing and are deferred to the user.
+- [x] Verify: `dart analyze && dart test` (27 tests pass).
 
 ## Risks / Out of scope
 
