@@ -12,6 +12,11 @@ include: package:flutter_lints/flutter.yaml
 plugins:
   hardcoded_strings_lint:
     path: ../
+    # Optional: override the lint message text shown in the IDE.
+    # Both keys are optional; omitting one keeps its built-in default.
+    options:
+      message: "Hardcoded string! Externalize to your ARB file."
+      correction_message: "See docs/i18n.md for instructions."
     diagnostics:
       avoid_hardcoded_strings_in_widgets: true
 

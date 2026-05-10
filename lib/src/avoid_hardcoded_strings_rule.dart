@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:analyzer/analysis_rule/analysis_rule.dart';
 import 'package:analyzer/analysis_rule/rule_context.dart';
 import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
@@ -5,6 +7,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart';
+import 'package:yaml/yaml.dart';
 
 class AvoidHardcodedStrings extends AnalysisRule {
   static const LintCode code = LintCode(
@@ -15,6 +18,10 @@ class AvoidHardcodedStrings extends AnalysisRule {
     severity: DiagnosticSeverity.WARNING,
   );
 
+  String? _customMessage;
+  String? _customCorrectionMessage;
+  bool _optionsRead = false;
+
   AvoidHardcodedStrings()
     : super(
         name: 'avoid_hardcoded_strings_in_widgets',
@@ -23,17 +30,63 @@ class AvoidHardcodedStrings extends AnalysisRule {
       );
 
   @override
-  DiagnosticCode get diagnosticCode => code;
+  DiagnosticCode get diagnosticCode => LintCode(
+    'avoid_hardcoded_strings_in_widgets',
+    _customMessage?.isNotEmpty == true
+        ? _customMessage!
+        : 'Hardcoded string detected in widget ⚠️ ',
+    correctionMessage: _customCorrectionMessage?.isNotEmpty == true
+        ? _customCorrectionMessage!
+        : 'Replace hardcoded string with a variable or localized string.',
+    severity: DiagnosticSeverity.WARNING,
+  );
 
   @override
   void registerNodeProcessors(
     RuleVisitorRegistry registry,
     RuleContext context,
   ) {
+    if (!_optionsRead) {
+      _readOptions(context);
+      _optionsRead = true;
+    }
     final visitor = _Visitor(this);
     registry.addSimpleStringLiteral(this, visitor);
     registry.addAdjacentStrings(this, visitor);
     registry.addStringInterpolation(this, visitor);
+  }
+
+  /// Sets custom messages directly, skipping file I/O.
+  /// Call this in tests before [assertDiagnostics] to inject custom values.
+  void setCustomMessagesForTest({String? message, String? correctionMessage}) {
+    _customMessage = message;
+    _customCorrectionMessage = correctionMessage;
+    _optionsRead = true;
+  }
+
+  void _readOptions(RuleContext context) {
+    try {
+      final rootPath = context.package?.root.path;
+      if (rootPath == null) return;
+      final file = File('$rootPath/analysis_options.yaml');
+      if (!file.existsSync()) return;
+      final doc = loadYaml(file.readAsStringSync());
+      if (doc is! YamlMap) return;
+      final plugins = doc['plugins'];
+      if (plugins is! YamlMap) return;
+      final pluginConfig = plugins['hardcoded_strings_lint'];
+      if (pluginConfig is! YamlMap) return;
+      final options = pluginConfig['options'];
+      if (options is! YamlMap) return;
+      final message = options['message'];
+      if (message is String && message.isNotEmpty) {
+        _customMessage = message;
+      }
+      final correction = options['correction_message'];
+      if (correction is String && correction.isNotEmpty) {
+        _customCorrectionMessage = correction;
+      }
+    } catch (_) {}
   }
 }
 

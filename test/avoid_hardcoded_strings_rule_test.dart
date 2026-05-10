@@ -5,6 +5,7 @@ import 'package:test_reflective_loader/test_reflective_loader.dart';
 void main() {
   defineReflectiveSuite(() {
     defineReflectiveTests(AvoidHardcodedStringsTest);
+    defineReflectiveTests(AvoidHardcodedStringsCustomMessagesTest);
   });
 }
 
@@ -213,5 +214,74 @@ import 'package:flutter/widgets.dart';
 
 Widget build(String name) => Text('Hello $name');
 ''');
+  }
+}
+
+@reflectiveTest
+class AvoidHardcodedStringsCustomMessagesTest extends AnalysisRuleTest {
+  @override
+  bool get addFlutterPackageDep => true;
+
+  @override
+  void setUp() {
+    rule = AvoidHardcodedStrings();
+    super.setUp();
+  }
+
+  static const _code = r'''
+import 'package:flutter/widgets.dart';
+
+Widget build() => Text('Hello world');
+''';
+
+  Future<void> test_default_message() async {
+    await assertDiagnostics(_code, [
+      lint(
+        63,
+        13,
+        messageContainsAll: ['Hardcoded string detected in widget'],
+        correctionContains: 'Replace hardcoded string',
+      ),
+    ]);
+  }
+
+  Future<void> test_custom_message() async {
+    (rule as AvoidHardcodedStrings).setCustomMessagesForTest(
+      message: 'Custom warning',
+    );
+    await assertDiagnostics(_code, [
+      lint(63, 13, messageContainsAll: ['Custom warning']),
+    ]);
+  }
+
+  Future<void> test_custom_correction_message() async {
+    (rule as AvoidHardcodedStrings).setCustomMessagesForTest(
+      correctionMessage: 'Custom correction',
+    );
+    await assertDiagnostics(_code, [
+      lint(63, 13, correctionContains: 'Custom correction'),
+    ]);
+  }
+
+  Future<void> test_both_custom_messages() async {
+    (rule as AvoidHardcodedStrings).setCustomMessagesForTest(
+      message: 'Custom warning',
+      correctionMessage: 'Custom correction',
+    );
+    await assertDiagnostics(_code, [
+      lint(
+        63,
+        13,
+        messageContainsAll: ['Custom warning'],
+        correctionContains: 'Custom correction',
+      ),
+    ]);
+  }
+
+  Future<void> test_empty_message_falls_back_to_default() async {
+    (rule as AvoidHardcodedStrings).setCustomMessagesForTest(message: '');
+    await assertDiagnostics(_code, [
+      lint(63, 13, messageContainsAll: ['Hardcoded string detected in widget']),
+    ]);
   }
 }
