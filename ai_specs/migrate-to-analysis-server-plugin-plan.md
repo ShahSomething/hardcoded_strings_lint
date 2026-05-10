@@ -61,24 +61,26 @@ Clean break from `custom_lint_builder` → `analysis_server_plugin`. Preserve al
 - [x] Error-handling: when `staticType == null` or element unresolvable, skip silently (match v1). _(Implicit: `_isFlutterWidget` returns `false` when element isn't an `InterfaceElement`.)_
 - [x] Verify: `dart analyze` (zero issues), `dart test` (all pass; 19 tests), `dart analyze` in `example/` (still flags 3 expected strings).
 
-### Phase 3: Quick fixes + fix tests
+### Phase 3: Quick fixes + fix tests ✅
 
 - **Goal**: Both quick fixes wired through `registerFixForRule` + tested.
-- [ ] `lib/src/fixes.dart` — new file.
-  - `class AddIgnoreCommentFix extends ResolvedCorrectionProducer`. Constructor `AddIgnoreCommentFix({required super.context});`. Static `const FixKind _kind = FixKind('dart.fix.addIgnoreHardcodedString', DartFixKindPriority.standard, "Add '// ignore' comment")`. `applicability => CorrectionApplicability.singleLocation`. `compute(ChangeBuilder)`: derive line indent, insert `'$indent// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets\n'` at `lineStart` (port from v1 `_AddIgnoreCommentFix.run`).
-  - `class ExtractToVariableFix extends ResolvedCorrectionProducer`. Same constructor signature. Static `const FixKind _kind` with name `'dart.fix.extractHardcodedStringToVariable'`, label `'Extract to variable'`, priority lower than ignore. `applicability => CorrectionApplicability.singleLocation`. `compute`: walk ancestors for `MethodDeclaration` (BlockFunctionBody) → insert `\n    const $name = <src>;\n` after `block.leftBracket`, replace literal with `$name`. Else `ClassDeclaration` → insert `\n  static const $name = <src>;\n` after `leftBracket`, replace literal. Else no-op (no throw).
-  - `_generateVariableName` — port verbatim (strip non-word/space, lowercase, first 3 words, camelCase, `Text` suffix; fallback `'textValue'`).
+- [x] `lib/src/fixes.dart` — new file.
+  - `class AddIgnoreCommentFix extends ResolvedCorrectionProducer`. Constructor `AddIgnoreCommentFix({required super.context});`. Static `const FixKind _kind = FixKind('dart.fix.addIgnoreHardcodedString', DartFixKindPriority.standard, "Add '// ignore' comment")`. `applicability => CorrectionApplicability.singleLocation`. `compute(ChangeBuilder)`: derive line indent from `unitResult.content` (not `compilationUnit.toSource()`, which strips formatting), insert `'$indent// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets\n'` at `lineStart`.
+  - `class ExtractToVariableFix extends ResolvedCorrectionProducer`. Same constructor signature. Static `const FixKind _kind` with name `'dart.fix.extractHardcodedStringToVariable'`, label `'Extract to variable'`, priority `standard - 1` (lower than ignore). `applicability => CorrectionApplicability.singleLocation`. `compute`: walk ancestors for `MethodDeclaration` (BlockFunctionBody) → insert `\n    const $name = <src>;\n` after `block.leftBracket`, replace literal with `$name`. Else `ClassDeclaration` → insert `\n  static const $name = <src>;\n` after `body.leftBracket` (analyzer 13 nests `leftBracket` inside `BlockClassBody`), replace literal. Else no-op (no throw).
+  - `_generateVariableName` — port verbatim (strip non-word/space, lowercase, first 3 words, camelCase, `Text` suffix; fallback `'textValue'`). Exposed via `testGenerateVariableName` for unit tests.
   - Both fixes: skip when `node.stringValue == null` (no edit).
-- [ ] `lib/hardcoded_strings_lint.dart` — in `register`, add `registry.registerFixForRule(<rule>.code, AddIgnoreCommentFix.new)` and same for `ExtractToVariableFix.new` (tear-offs, not instances).
-- [ ] TDD (one cycle per behavior):
+  - Adds `analyzer_plugin: ^0.14.9` as a direct dependency (was a transitive in v1, but `package:analyzer_plugin/utilities/change_builder/change_builder_core.dart` and `package:analyzer_plugin/utilities/fixes/fixes.dart` are imported directly).
+- [x] `lib/main.dart` — in `register`, add `registry.registerFixForRule(AvoidHardcodedStrings.code, AddIgnoreCommentFix.new)` and same for `ExtractToVariableFix.new` (tear-offs, not instances).
+- [x] TDD (one cycle per behavior):
   - Ignore-fix produces correct comment text above line.
   - Ignore-fix preserves leading indentation on deeply-indented line.
   - Extract-fix at method scope: `const helloWorldText = 'Hello world';` at block start + literal replaced with identifier.
   - Extract-fix at class scope: `static const ...` after class `{` + literal replaced.
   - Extract-fix `_generateVariableName('Hello, World!')` → `helloWorldText`.
   - Extract-fix `'!!!!!'` (>2 chars to bypass short-skip) → fallback `textValue`.
+  - Extract-fix `_generateVariableName('one two three four')` → `oneTwoThreeText` (first-three-words rule).
   - Extract-fix with no enclosing method/class: no-op, no throw.
-- [ ] Verify: `dart analyze && dart test` (all pass).
+- [x] Verify: `dart analyze && dart test` (27 tests pass — 19 rule + 5 fix integration + 3 `_generateVariableName`).
 
 ### Phase 4: Docs, CHANGELOG, manual verification
 
