@@ -6,6 +6,13 @@ All notable changes to the hardcoded_strings_lint package will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-05-10
+### Added
+- **Customizable lint messages**: Override the warning text and correction hint per-project via an `options:` block in `analysis_options.yaml`. Both `message` and `correction_message` are optional; omitting either keeps the built-in default.
+- **"Ignore for whole file" quick fix** (`IgnoreForFileFix`): Inserts an `// ignore_for_file: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets` comment at the top of the current file, or appends to an existing `ignore_for_file` comment if one is already present.
+- **"Ignore in `analysis_options.yaml`" quick fix** (`IgnoreInAnalysisOptionsFix`): Writes `diagnostics: { avoid_hardcoded_strings_in_widgets: false }` into the plugin section of `analysis_options.yaml`, disabling the rule project-wide without touching source files.
+- `yaml_edit: ^2.2.4` direct dependency (used by `IgnoreInAnalysisOptionsFix` to safely edit YAML).
+
 ## [2.0.0] - 2026-05-10
 ### Changed
 - **BREAKING**: Migrated from `custom_lint_builder` to Dart's official [`analysis_server_plugin`][asp] system. The plugin is now loaded through a top-level `plugins:` block in `analysis_options.yaml` instead of being a `dev_dependency` registered under `analyzer.plugins`. See the README's "Migrating from 1.x" section for the full diff.

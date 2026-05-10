@@ -26,6 +26,8 @@ A Flutter analyzer plugin that detects hardcoded strings in widget constructors,
 ### Quick Fixes
 
 - **Add ignore comment** — inserts the prefixed `// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets` above the offending line.
+- **Ignore for whole file** — inserts `// ignore_for_file: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets` at the top of the file (or appends to an existing `ignore_for_file` comment).
+- **Ignore in `analysis_options.yaml`** — disables the rule project-wide by writing `diagnostics: { avoid_hardcoded_strings_in_widgets: false }` into your `analysis_options.yaml`.
 - **Extract to variable** — extracts the literal to a `const` local (inside a method) or a `static const` field (inside a class), naming the variable from the string contents (e.g. `'Hello, World!'` → `helloWorldText`).
 
 ## Installation
@@ -36,7 +38,7 @@ Add the plugin under the **top-level** `plugins:` block (not under `analyzer:`):
 
 ```yaml
 plugins:
-  hardcoded_strings_lint: ^2.0.0
+  hardcoded_strings_lint: ^2.1.0
 ```
 
 The plugin's diagnostic is enabled by default. To explicitly disable or re-enable it use the nested `diagnostics:` map:
@@ -179,6 +181,29 @@ Text('Hello World')
 // ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets
 Text('Hello World')
 ```
+
+### Ignore for whole file
+
+```dart
+// ignore_for_file: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets
+
+class DebugScreen extends StatelessWidget { /* ... */ }
+```
+
+If `ignore_for_file:` is already present in the file the rule name is appended to the existing comment rather than adding a second one.
+
+### Ignore in `analysis_options.yaml`
+
+Disables the rule for the entire project by adding the following to your `analysis_options.yaml`:
+
+```yaml
+plugins:
+  hardcoded_strings_lint:
+    diagnostics:
+      avoid_hardcoded_strings_in_widgets: false
+```
+
+The fix creates the `plugins`, `hardcoded_strings_lint`, and `diagnostics` keys if any are absent, and is a no-op if the rule is already disabled.
 
 ### Extract to variable
 
