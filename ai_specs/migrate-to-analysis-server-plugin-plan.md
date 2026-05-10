@@ -1,0 +1,116 @@
+# Plan: Migrate to `analysis_server_plugin` (v2.0.0) ✅
+
+## Overview
+
+Clean break from `custom_lint_builder` → `analysis_server_plugin`. Preserve all v1 detection + both fixes. Add unit tests using `analyzer_testing` harness.
+
+**Spec**: `ai_specs/migrate-to-analysis-server-plugin.md` (read for full requirements)
+
+## Context
+
+- **Structure**: Flat `lib/` + `lib/src/` (Dart package, not Flutter app).
+- **State**: N/A — pure analyzer plugin, no UI, no I/O, no async state.
+- **Reference impls**:
+  - v1 monolith: `lib/src/hardcoded_strings_lint_base.dart` (logic to port verbatim).
+  - v1 entry: `lib/hardcoded_strings_lint.dart` (replace `createPlugin()`).
+  - External pattern: `many_lints` package on pub.dev; Dart SDK `pkg/analysis_server_plugin/doc/{writing_rules,writing_fixes,testing_rules,using_plugins}.md`.
+- **Assumptions/Gaps**:
+  - `analyzer ^12.x` keeps unsuffixed accessors (`.element`, `.supertype`, `.name`) — verify; do NOT add `.element2`/`.name2`.
+  - Exact `analyzer` floor = whatever `analysis_server_plugin ^0.3.15` resolves to (check at impl time).
+  - Fix-test API: follow `analyzer_testing` exposes (`assertFixContents` or equivalent) per `testing_rules.md`.
+  - `analyzer_testing` version: pick one compatible with `analyzer ^12.x` at impl time.
+
+## Plan
+
+### Phase 1: End-to-end vertical slice — minimal plugin reports one diagnostic ✅
+
+- **Goal**: Wire new `Plugin` + `AnalysisRule` skeleton; prove `dart analyze` on `example/` flags one hardcoded string. No fixes yet, no full filter set.
+- [x] `pubspec.yaml` — bump `version: 2.0.0`, `sdk: ^3.10.0`; drop `custom_lint_builder` + `analyzer_plugin`; add `analysis_server_plugin: ^0.3.15`, `analyzer: ^12.x` (use lower bound from resolution); add `dev_dependencies`: `analyzer_testing`, `test_reflective_loader: ^0.2.x`; keep `test`, `lints`. _(Note: `analysis_server_plugin ^0.3.15` actually requires `analyzer 13.0.0` and Dart SDK `^3.11.0`; pubspec uses these resolved floors.)_
+- [x] `lib/src/avoid_hardcoded_strings_rule.dart` — new file. `AvoidHardcodedStrings extends AnalysisRule`. Static `const LintCode code` with `severity: DiagnosticSeverity.WARNING` (analyzer 13's `LintCode` accepts `severity:`; `registerWarningRule` only governs default-enabled status, not display severity). Override `diagnosticCode => code`. `registerNodeProcessors` calls `addSimpleStringLiteral`/`addAdjacentStrings`/`addStringInterpolation` with one shared `_Visitor extends SimpleAstVisitor<void>`. _(Note: Phase 1 also includes `_isPassedToWidget` because the test source must `import 'package:flutter/widgets.dart'` to type-resolve `Text(...)`, and that import string would otherwise be reported.)_
+- [x] `lib/hardcoded_strings_lint.dart` — replace `createPlugin()` with top-level `final plugin = HardcodedStringsPlugin();` + `class HardcodedStringsPlugin extends Plugin`. Override `name => 'hardcoded_strings_lint'` + `register(PluginRegistry registry)` calling `registry.registerWarningRule(rule)`. _(Note: file is `lib/main.dart` instead — analyzer's plugin loader generates a shim that imports `package:<plugin>/main.dart`. Using a different filename causes AOT compilation failure when the analyzer tries to load the plugin.)_
+- [x] Delete `lib/src/hardcoded_strings_lint_base.dart` after extraction is complete (Phase 2 may still consult it; final delete at end of Phase 2). _(Deleted in Phase 1: with the v1 imports gone, the file errored out `dart analyze`; v1 logic remains available in conversation context for porting.)_
+- [x] `example/pubspec.yaml` — drop `custom_lint`, `analyzer`, and the `hardcoded_strings_lint:` dependency entry; bump `sdk: ^3.10.0`. _(SDK bumped to `^3.11.0` to match resolved analyzer floor.)_
+- [x] `example/analysis_options.yaml` — remove `analyzer.plugins: [custom_lint]`; add nested `plugins:\n  hardcoded_strings_lint:\n    path: ../\n    diagnostics:\n      avoid_hardcoded_strings_in_widgets: true`.
+- [x] TDD: rule reports diagnostic for `Text('Hello world')` — write failing test using `AnalysisRuleTest` from `analyzer_testing` (assigns `rule = AvoidHardcodedStrings()` in `setUp`), then make pass.
+- [x] TDD: rule does NOT report for `Text('a')` (length ≤ 2) → then implement guard.
+- [x] TDD: rule does NOT report for `Text('')` → then implement guard.
+- [x] Verify: `dart pub get && dart analyze && dart test` in pkg root; `dart pub get && dart analyze` in `example/` produces hardcoded-string warning on `lib/main.dart`.
+
+### Phase 2: Port full detection filter set + delete v1 monolith ✅
+
+- **Goal**: Behavior parity with v1 — widget walk, callback skip, technical/property/map-key filters. Delete legacy file.
+- [x] `lib/src/avoid_hardcoded_strings_rule.dart` — port verbatim from v1 (`hardcoded_strings_lint_base.dart`):
+  - `_isPassedToWidget` (ArgumentList ancestor walk + FunctionExpression/FunctionBody early-out + InstanceCreationExpression check + widget-type check + direct-arg / NamedArgument match). _(analyzer 13 renames `NamedExpression`→`NamedArgument` and exposes the value via `argumentExpression` / the name via `name.lexeme`.)_
+  - `_isFlutterWidget` + `_extendsWidget` + `_isWidgetBaseClass` allowlist (12 classes verbatim). Walk via `InterfaceElement` (analyzer 13's `supertype.element` is typed as `InterfaceElement`, not `ClassElement`).
+  - `_isAcceptableWidgetProperty` (22-property allowlist verbatim).
+  - `_isTechnicalString` (10-regex set verbatim).
+  - `_isMapKey` (`IndexExpression.index` + `MapLiteralEntry.key`).
+  - Order in visitor: empty/short → `_isPassedToWidget` → `_isMapKey` → `_isAcceptableWidgetProperty` → `_isTechnicalString` → report (match v1).
+  - Do NOT port `_hasIgnoreComment` / `_containsIgnoreComment`.
+- [x] Delete `lib/src/hardcoded_strings_lint_base.dart`. _(Done in Phase 1.)_
+- [x] TDD per filter (one RED→GREEN cycle each):
+  - URL / email / hex / snake_case / CONSTANT_CASE / dotted-notation skipped.
+  - Acceptable widget properties skipped (used `Text(semanticsLabel:)` and `Scaffold(restorationId:)`; `Hero`/`Image`/`Semantics` are not in the `analyzer_testing` mock Flutter package, so substituted with widgets that exist in the mock).
+  - `map['k']` and `{'k': v}` skipped.
+  - String inside `GestureDetector(onTap: () { logger.info('...'); })` NOT flagged (v1.0.4 regression test; substitutes `BlocListener` since BLoC isn't in the mock).
+  - `print('hi')` and `myFn('hi')` (non-widget) NOT flagged.
+  - Custom `class MyBadge extends StatelessWidget` flagged on its `Text(...)` arg (chain walk via `InterfaceElement.supertype`).
+  - Adjacent strings `Text('foo bar' 'baz qux')` — reports the AdjacentStrings node (single diagnostic). Per-fragment reporting was claimed by the plan but does not match v1: v1's "direct argument" check only matches whole `arguments` entries, so individual fragments inside `AdjacentStrings` are filtered out.
+  - Interpolation `Text('Hello $name')` NOT flagged (`stringValue == null` guard).
+  - Ignore-comment suppression deferred to Phase 4 manual verification (the `analyzer_testing` harness applies its own analysis options that re-enable the rule, so a plain `// ignore:` test is brittle).
+- [x] Error-handling: when `staticType == null` or element unresolvable, skip silently (match v1). _(Implicit: `_isFlutterWidget` returns `false` when element isn't an `InterfaceElement`.)_
+- [x] Verify: `dart analyze` (zero issues), `dart test` (all pass; 19 tests), `dart analyze` in `example/` (still flags 3 expected strings).
+
+### Phase 3: Quick fixes + fix tests ✅
+
+- **Goal**: Both quick fixes wired through `registerFixForRule` + tested.
+- [x] `lib/src/fixes.dart` — new file.
+  - `class AddIgnoreCommentFix extends ResolvedCorrectionProducer`. Constructor `AddIgnoreCommentFix({required super.context});`. Static `const FixKind _kind = FixKind('dart.fix.addIgnoreHardcodedString', DartFixKindPriority.standard, "Add '// ignore' comment")`. `applicability => CorrectionApplicability.singleLocation`. `compute(ChangeBuilder)`: derive line indent from `unitResult.content` (not `compilationUnit.toSource()`, which strips formatting), insert `'$indent// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets\n'` at `lineStart`.
+  - `class ExtractToVariableFix extends ResolvedCorrectionProducer`. Same constructor signature. Static `const FixKind _kind` with name `'dart.fix.extractHardcodedStringToVariable'`, label `'Extract to variable'`, priority `standard - 1` (lower than ignore). `applicability => CorrectionApplicability.singleLocation`. `compute`: walk ancestors for `MethodDeclaration` (BlockFunctionBody) → insert `\n    const $name = <src>;\n` after `block.leftBracket`, replace literal with `$name`. Else `ClassDeclaration` → insert `\n  static const $name = <src>;\n` after `body.leftBracket` (analyzer 13 nests `leftBracket` inside `BlockClassBody`), replace literal. Else no-op (no throw).
+  - `_generateVariableName` — port verbatim (strip non-word/space, lowercase, first 3 words, camelCase, `Text` suffix; fallback `'textValue'`). Exposed via `testGenerateVariableName` for unit tests.
+  - Both fixes: skip when `node.stringValue == null` (no edit).
+  - Adds `analyzer_plugin: ^0.14.9` as a direct dependency (was a transitive in v1, but `package:analyzer_plugin/utilities/change_builder/change_builder_core.dart` and `package:analyzer_plugin/utilities/fixes/fixes.dart` are imported directly).
+- [x] `lib/main.dart` — in `register`, add `registry.registerFixForRule(AvoidHardcodedStrings.code, AddIgnoreCommentFix.new)` and same for `ExtractToVariableFix.new` (tear-offs, not instances).
+- [x] TDD (one cycle per behavior):
+  - Ignore-fix produces correct comment text above line.
+  - Ignore-fix preserves leading indentation on deeply-indented line.
+  - Extract-fix at method scope: `const helloWorldText = 'Hello world';` at block start + literal replaced with identifier.
+  - Extract-fix at class scope: `static const ...` after class `{` + literal replaced.
+  - Extract-fix `_generateVariableName('Hello, World!')` → `helloWorldText`.
+  - Extract-fix `'!!!!!'` (>2 chars to bypass short-skip) → fallback `textValue`.
+  - Extract-fix `_generateVariableName('one two three four')` → `oneTwoThreeText` (first-three-words rule).
+  - Extract-fix with no enclosing method/class: no-op, no throw.
+- [x] Verify: `dart analyze && dart test` (27 tests pass — 19 rule + 5 fix integration + 3 `_generateVariableName`).
+
+### Phase 4: Docs, CHANGELOG, manual verification ✅
+
+- **Goal**: User-facing docs reflect new model; `## [2.0.0]` entry; manual IDE/CLI checklist.
+- [x] `README.md`:
+  - Bump install snippet version to `^2.0.0`.
+  - Replace `dev_dependencies` install instructions with `analysis_options.yaml`-based config (new top-level `plugins:` block with optional nested `diagnostics:` map).
+  - Sweep `custom_lint`: `grep -n "custom_lint" README.md` confirms zero matches outside the "Migrating from 1.x" section.
+  - Rewrite Troubleshooting → "Rule Not Running": (a) ensure listed in `plugins:` block, (b) restart analyzer/IDE, (c) `dart pub get`, (d) `dart analyze`. No `dart run custom_lint`.
+  - Update every example ignore comment to `// ignore: hardcoded_strings_lint/avoid_hardcoded_strings_in_widgets`. Removed `// hardcoded.ok` and `// ignore: hardcoded.string` examples.
+  - Added `## Migrating from 1.x` section: why (custom_lint deprecation), before/after `pubspec.yaml` diff, before/after `analysis_options.yaml` diff, ignore-prefix note, removed bespoke shorthands note, no more `dart run custom_lint`.
+  - Added Troubleshooting one-liner for SDK issue [#62173](https://github.com/dart-lang/sdk/issues/62173).
+- [x] `CHANGELOG.md` — prepended `## [2.0.0] - 2026-05-10`:
+  - BREAKING: migrated to `analysis_server_plugin`.
+  - BREAKING: SDK floor `^3.11.0` (forced by analyzer 13.0.0 → `analysis_server_plugin ^0.3.15`).
+  - BREAKING: ignore comment requires `hardcoded_strings_lint/` prefix.
+  - BREAKING: removed `// hardcoded.ok` and `// ignore: hardcoded.string` shorthands.
+  - BREAKING: removed `createPlugin()` factory; entry point is now `lib/main.dart`.
+  - `dart run custom_lint` no longer required.
+- [x] Manual verification (per spec `<validation>` checklist):
+  - `dart pub get` resolves cleanly in pkg root + `example/`. ✅
+  - `dart analyze` zero issues in pkg root (`lib/` + `test/`). ✅
+  - `dart analyze` in `example/` produces 3 expected warnings on `example/lib/main.dart` (lines 14, 18, 52). ✅ _(After clearing `~/.dartServer/.plugin_manager/` once to drop the stale v1 shim.)_
+  - Remaining items (IDE inline icons, lightbulb fix application, in-IDE ignore suppression) require interactive IDE testing and are deferred to the user.
+- [x] Verify: `dart analyze && dart test` (27 tests pass).
+
+## Risks / Out of scope
+
+- **Risks**:
+  - `analysis_server_plugin ^0.3.15` is pre-1.0 — minor bumps may break. Pin tightly; document volatility in README.
+  - `analyzer ^12.x` element-model accessor surprises if SDK shifted again — fallback: fix to current unsuffixed names, do NOT add suffixed.
+  - `analyzer_testing` fix-test API not yet inspected — exact assertion helper TBD at impl time.
+- **Out of scope**: new lint rules; new acceptable-property/technical-pattern entries; bulk-fix support; user-configurable rule params; backward-compat shims for `createPlugin()`; updates to `example/lib/main.dart`; generated/part-file handling.

@@ -1,0 +1,34 @@
+# Files and directories created by pub.
+.dart_tool/
+.packages
+build/
+
+# Conventional directory for build outputs.
+doc/api/
+
+# Avoid committing generated JavaScript files.
+*.dart.js
+*.info.json
+*.js_*.*
+*.js.deps
+*.js.map
+
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# FVM
+.fvm/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
