@@ -6,6 +6,17 @@ All notable changes to the hardcoded_strings_lint package will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-08-18
+### Fixed
+- **Compatibility with `analyzer` 14.** `AnalysisOptionsImpl` moved from `package:analyzer/src/dart/analysis/analysis_options.dart` to `package:analyzer/src/analysis_options/analysis_options.dart`. Against `analyzer` 14 the old path made the plugin fail to compile to an AOT snapshot (`'AnalysisOptionsImpl' isn't a type`), which disabled **all** of the plugin's diagnostics, not just the affected quick fix.
+
+### Changed
+- Raised dependency lower bounds: `analyzer` to `^14.1.0` (from `^13.0.0`), `analysis_server_plugin` to `^0.3.20` (from `^0.3.15`), `analyzer_plugin` to `^0.14.14` (from `^0.14.9`). The relocated import does not exist in `analyzer` 13, so projects still resolving `analyzer` 13.x should remain on 2.1.0.
+
+### Documentation
+- Documented the `unsupported_option` warning that the analyzer reports on the `options:` block introduced in 2.1.0, and how to silence it with `analyzer: errors: unsupported_option: ignore`. The analyzer validates the `plugins:` section against a fixed key allowlist (`diagnostics`, `git`, `path`, `version`, `hosted`) and provides no extension point for package-specific keys, so the warning is a false positive — custom messages are read and applied correctly. This warning is not new in 2.1.1; it has been present since `options:` was added.
+- Documented that `flutter analyze` does not run analyzer plugins and reports none of this plugin's diagnostics. Use `dart analyze` or rely on the IDE, both of which do run it.
+
 ## [2.1.0] - 2026-05-10
 ### Added
 - **Customizable lint messages**: Override the warning text and correction hint per-project via an `options:` block in `analysis_options.yaml`. Both `message` and `correction_message` are optional; omitting either keeps the built-in default.

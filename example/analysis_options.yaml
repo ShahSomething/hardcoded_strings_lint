@@ -9,6 +9,22 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+  errors:
+    # The analyzer validates the `plugins:` block against a fixed key
+    # allowlist (`diagnostics`, `git`, `path`, `version`, `hosted`) and has no
+    # extension point for package-specific keys, so it flags the `options:`
+    # block below even though this plugin reads it correctly.
+    unsupported_option: ignore
+
 plugins:
   hardcoded_strings_lint:
     path: ../

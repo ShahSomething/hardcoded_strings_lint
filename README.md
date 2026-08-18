@@ -67,6 +67,25 @@ plugins:
 
 Both `message` and `correction_message` are optional. Omitting either keeps that field's built-in default. An empty string also falls back to the default.
 
+#### Silencing the `unsupported_option` warning
+
+The analyzer validates the `plugins:` block against a fixed key allowlist — `diagnostics`, `git`, `path`, `version`, `hosted` — and offers no extension point for package-specific keys. It therefore reports a warning on the `options:` block above:
+
+```
+warning - analysis_options.yaml:3:5 - The option 'options' isn't supported by
+          'plugins/hardcoded_strings_lint'. - unsupported_option
+```
+
+This is a false positive: the plugin reads `options:` by parsing `analysis_options.yaml` directly, so your custom messages do take effect. Silence it with:
+
+```yaml
+analyzer:
+  errors:
+    unsupported_option: ignore
+```
+
+If you'd rather not add that stanza, omit the `options:` block and use the built-in default messages.
+
 ### 2. Resolve and analyze
 
 ```bash
@@ -283,6 +302,10 @@ The bespoke `// hardcoded.ok` and `// ignore: hardcoded.string` shorthands are r
 ## Troubleshooting
 
 ### Rule not running
+
+**Use `dart analyze`, not `flutter analyze`.** `flutter analyze` does not run analyzer plugins, so this rule reports nothing under it. The same project that reports 3 hardcoded strings under `dart analyze` reports 0 under `flutter analyze`. Your IDE (which talks to the Dart Analysis Server directly) does run the plugin.
+
+If `dart analyze` also reports nothing:
 
 1. Confirm `hardcoded_strings_lint` is listed under `plugins:` in `analysis_options.yaml`.
 2. Restart the Dart Analysis Server / your IDE — plugin changes only take effect after a restart.
